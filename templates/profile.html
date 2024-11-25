@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }}'s Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="profile-header">
+        <div class="profile-cover"></div>
+        <div class="profile-info">
+            <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" alt="Profile" class="profile-avatar large">
+            <div class="profile-details">
+                <div class="profile-top">
+                    <h1>{{ user.username }}</h1>
+                    {% if current_user.is_authenticated and user.id != current_user.id %}
+                    <form action="{{ url_for('follow' if user.id not in current_user.following else 'unfollow', user_id=user.id) }}" method="POST">
+                        <button type="submit" class="btn {% if user.id in current_user.following %}btn-secondary{% endif %}">
+                            {{ 'Unfollow' if user.id in current_user.following else 'Follow' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% if current_user.is_authenticated and user.id == current_user.id %}
+                    <a href="{{ url_for('edit_profile') }}" class="btn">Edit Profile</a>
+                    {% endif %}
+                </div>
+                <p class="bio">{{ user.bio or 'No bio yet' }}</p>
+                <div class="profile-stats">
+                    <span><strong>{{ user.followers|length }}</strong> followers</span>
+                    <span><strong>{{ user.following|length }}</strong> following</span>
+                    <span><strong>{{ posts|length }}</strong> posts</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-content">
+        <div class="posts-grid">
+            {% for post in posts %}
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="post-info">
+                        <span class="timestamp">{{ post.created_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                </div>
+                <div class="post-content">
+                    <p>{{ post.content }}</p>
+                    {% if post.image %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post image" class="post-image">
+                    {% endif %}
+                </div>
+                <div class="post-actions">
+                    <form action="{{ url_for('like_post', post_id=post._id) }}" method="POST" class="like-form">
+                        <button type="submit" class="btn-icon {% if current_user.id in post.likes %}liked{% endif %}">
+                            <i class="fas fa-heart"></i>
+                            <span>{{ post.likes|length }}</span>
+                        </button>
+                    </form>
+                    <button class="btn-icon comment-toggle">
+                        <i class="fas fa-comment"></i>
+                        <span>{{ post.comments|length }}</span>
+                    </button>
+                </div>
+                <div class="comments-section">
+                    <form action="{{ url_for('add_comment', post_id=post._id) }}" method="POST" class="comment-form">
+                        <input type="text" name="content" placeholder="Add a comment..." required>
+                        <button type="submit" class="btn-secondary">Comment</button>
+                    </form>
+                    <div class="comments-list">
+                        {% for comment in post.comments %}
+                        <div class="comment">
+                            <a href="{{ url_for('profile', username=comment.username) }}" class="username">{{ comment.username }}</a>
+                            <p>{{ comment.content }}</p>
+                            <span class="timestamp">{{ comment.created_at.strftime('%B %d, %Y') }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+<script>
+document.querySelectorAll('.comment-toggle').forEach(button => {
+    button.addEventListener('click', function() {
+        const commentsSection = this.closest('.post-card').querySelector('.comments-section');
+        commentsSection.classList.toggle('active');
+    });
+});
+</script>
+{% endblock %}

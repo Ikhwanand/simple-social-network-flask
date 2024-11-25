@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if current_user.is_authenticated %}
+    <div class="content-grid">
+        <!-- Left sidebar -->
+        <div class="sidebar">
+            <div class="profile-card">
+                <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" alt="Profile" class="profile-avatar">
+                <h3>{{ current_user.username }}</h3>
+                <p class="bio">{{ current_user.bio or 'No bio yet' }}</p>
+                <div class="profile-stats">
+                    <span>{{ current_user.get_followers_count() }} followers</span>
+                    <span>{{ current_user.get_following_count() }} following</span>
+                </div>
+                <a href="{{ url_for('edit_profile') }}" class="btn">Edit Profile</a>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main-feed">
+            <!-- Create post form -->
+            <div class="create-post">
+                <form action="{{ url_for('create_post') }}" method="POST" enctype="multipart/form-data" class="post-form">
+                    <textarea name="content" placeholder="What's on your mind?" required></textarea>
+                    <div class="post-actions">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="image" accept="image/*" id="image-upload" class="file-input">
+                            <label for="image-upload" class="btn-secondary">
+                                <i class="fas fa-image"></i> Add Image
+                            </label>
+                        </div>
+                        <button type="submit" class="btn">Share Post</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Posts feed -->
+            <div class="posts-container">
+                {% for post in posts %}
+                <div class="post-card">
+                    <div class="post-header">
+                        <img src="{{ url_for('static', filename='uploads/' + post.user_avatar) }}" alt="Profile" class="post-avatar">
+                        <div class="post-info">
+                            <a href="{{ url_for('profile', username=post.username) }}" class="username">{{ post.username }}</a>
+                            <span class="timestamp">{{ post.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        <p>{{ post.content }}</p>
+                        {% if post.image %}
+                        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post image" class="post-image">
+                        {% endif %}
+                    </div>
+                    <div class="post-actions">
+                        <form action="{{ url_for('like_post', post_id=post._id) }}" method="POST" class="like-form">
+                            <button type="submit" class="btn-icon {% if current_user.id in post.likes %}liked{% endif %}">
+                                <i class="fas fa-heart"></i>
+                                <span>{{ post.likes|length if post.likes else 0 }} likes</span>
+                            </button>
+                        </form>
+                        <button class="btn-icon comment-toggle">
+                            <i class="fas fa-comment"></i>
+                            <span>{{ post.comments|length if post.comments else 0 }} comments</span>
+                        </button>
+                    </div>
+                    <div class="comments-section">
+                        <form action="{{ url_for('add_comment', post_id=post._id) }}" method="POST" class="comment-form">
+                            <input type="text" name="content" placeholder="Write a comment..." required>
+                            <button type="submit" class="btn-secondary">Post</button>
+                        </form>
+                        <div class="comments-list">
+                            {% for comment in post.comments|default([]) %}
+                            <div class="comment">
+                                <a href="{{ url_for('profile', username=comment.username) }}" class="username">{{ comment.username }}</a>
+                                <p>{{ comment.content }}</p>
+                                <span class="timestamp">{{ comment.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Right sidebar -->
+        <div class="sidebar">
+            <div class="suggested-users">
+                <h3>Suggested Users</h3>
+                {% for user in suggested_users %}
+                <div class="user-card">
+                    <img src="{{ url_for('static', filename='uploads/' + (user.avatar or 'default.jpg')) }}" alt="Profile" class="user-avatar">
+                    <div class="user-info">
+                        <a href="{{ url_for('profile', username=user.username) }}" class="username">{{ user.username }}</a>
+                        <form action="{{ url_for('follow', user_id=user._id) }}" method="POST">
+                            <button type="submit" class="btn-secondary">Follow</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="welcome-section">
+        <h1>Welcome to Our Social Network</h1>
+        <p>Connect with friends and share your moments.</p>
+        <div class="auth-buttons">
+            <a href="{{ url_for('login') }}" class="btn">Login</a>
+            <a href="{{ url_for('signup') }}" class="btn-secondary">Sign Up</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle comments section
+    document.querySelectorAll('.comment-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+            const commentsSection = this.closest('.post-card').querySelector('.comments-section');
+            commentsSection.classList.toggle('active');
+        });
+    });
+
+    // Image upload preview
+    const imageUpload = document.getElementById('image-upload');
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const label = this.nextElementSibling;
+                label.innerHTML = `<i class="fas fa-image"></i> ${file.name}`;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
